@@ -192,8 +192,8 @@ class PPO1(ActorCriticRLModel):
                 seg_gen = traj_segment_generator(self.policy_pi, self.env, self.timesteps_per_actorbatch)
 
                 episodes_so_far = 0
-                iters_so_far = 0
                 timesteps_so_far = 0
+                iters_so_far = 0
                 t_start = time.time()
 
                 # rolling buffer for episode lengths
@@ -307,9 +307,9 @@ class PPO1(ActorCriticRLModel):
                         logger.record_tabular("EpRewMean", np.mean(rewbuffer))
                     logger.record_tabular("EpThisIter", len(lens))
                     episodes_so_far += len(lens)
-                    total_timesteps = MPI.COMM_WORLD.allreduce(seg["total_timestep"])
-                    timesteps_so_far += total_timesteps
-                    self.num_timesteps += total_timesteps
+                    current_it_timesteps = MPI.COMM_WORLD.allreduce(seg["total_timestep"])
+                    timesteps_so_far += current_it_timesteps
+                    self.num_timesteps += current_it_timesteps
                     iters_so_far += 1
                     logger.record_tabular("EpisodesSoFar", episodes_so_far)
                     logger.record_tabular("TimestepsSoFar", self.num_timesteps)

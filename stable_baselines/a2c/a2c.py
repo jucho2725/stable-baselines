@@ -35,11 +35,13 @@ class A2C(ActorCriticRLModel):
     :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
                               (used only for loading)
     :param policy_kwargs: (dict) additional arguments to be passed to the policy on creation
+    :param full_tensorboard_log: (bool) enable additional logging when using tensorboard
+        WARNING: this logging can take a lot of space quickly
     """
 
     def __init__(self, policy, env, gamma=0.99, n_steps=5, vf_coef=0.25, ent_coef=0.01, max_grad_norm=0.5,
                  learning_rate=7e-4, alpha=0.99, epsilon=1e-5, lr_schedule='linear', verbose=0, tensorboard_log=None,
-                 _init_setup_model=True, policy_kwargs=None):
+                 _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False):
 
         super(A2C, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
                                   _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -54,6 +56,7 @@ class A2C(ActorCriticRLModel):
         self.lr_schedule = lr_schedule
         self.learning_rate = learning_rate
         self.tensorboard_log = tensorboard_log
+        self.full_tensorboard_log = full_tensorboard_log
 
         self.graph = None
         self.sess = None
@@ -132,15 +135,16 @@ class A2C(ActorCriticRLModel):
 
                 with tf.variable_scope("input_info", reuse=False):
                     tf.summary.scalar('discounted_rewards', tf.reduce_mean(self.rewards_ph))
-                    tf.summary.histogram('discounted_rewards', self.rewards_ph)
                     tf.summary.scalar('learning_rate', tf.reduce_mean(self.learning_rate))
-                    tf.summary.histogram('learning_rate', self.learning_rate)
                     tf.summary.scalar('advantage', tf.reduce_mean(self.advs_ph))
-                    tf.summary.histogram('advantage', self.advs_ph)
-                    if len(self.observation_space.shape) == 3:
-                        tf.summary.image('observation', train_model.obs_ph)
-                    else:
-                        tf.summary.histogram('observation', train_model.obs_ph)
+                    if self.full_tensorboard_log:
+                        tf.summary.histogram('discounted_rewards', self.rewards_ph)
+                        tf.summary.histogram('learning_rate', self.learning_rate)
+                        tf.summary.histogram('advantage', self.advs_ph)
+                        if tf_util.is_image(self.observation_space):
+                            tf.summary.image('observation', train_model.obs_ph)
+                        else:
+                            tf.summary.histogram('observation', train_model.obs_ph)
 
                 trainer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate_ph, decay=self.alpha,
                                                     epsilon=self.epsilon)
@@ -184,7 +188,7 @@ class A2C(ActorCriticRLModel):
 
         if writer is not None:
             # run loss backprop with summary, but once every 10 runs save the metadata (memory, compute time, ...)
-            if (1 + update) % 10 == 0:
+            if self.full_tensorboard_log and (1 + update) % 10 == 0:
                 run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()
                 summary, policy_loss, value_loss, policy_entropy, _ = self.sess.run(

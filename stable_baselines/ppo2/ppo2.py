@@ -37,11 +37,14 @@ class PPO2(ActorCriticRLModel):
     :param tensorboard_log: (str) the log location for tensorboard (if None, no logging)
     :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
     :param policy_kwargs: (dict) additional arguments to be passed to the policy on creation
+    :param full_tensorboard_log: (bool) enable additional logging when using tensorboard
+        WARNING: this logging can take a lot of space quickly
     """
 
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
-                 tensorboard_log=None, _init_setup_model=True, policy_kwargs=None):
+                 tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
+                 full_tensorboard_log=False):
 
         super(PPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
                                    _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -57,6 +60,7 @@ class PPO2(ActorCriticRLModel):
         self.nminibatches = nminibatches
         self.noptepochs = noptepochs
         self.tensorboard_log = tensorboard_log
+        self.full_tensorboard_log = full_tensorboard_log
 
         self.graph = None
         self.sess = None
@@ -156,8 +160,9 @@ class PPO2(ActorCriticRLModel):
 
                     with tf.variable_scope('model'):
                         self.params = tf.trainable_variables()
-                        for var in self.params:
-                            tf.summary.histogram(var.name, var)
+                        if self.full_tensorboard_log:
+                            for var in self.params:
+                                tf.summary.histogram(var.name, var)
                     grads = tf.gradients(loss, self.params)
                     if self.max_grad_norm is not None:
                         grads, _grad_norm = tf.clip_by_global_norm(grads, self.max_grad_norm)
@@ -169,21 +174,23 @@ class PPO2(ActorCriticRLModel):
 
                 with tf.variable_scope("input_info", reuse=False):
                     tf.summary.scalar('discounted_rewards', tf.reduce_mean(self.rewards_ph))
-                    tf.summary.histogram('discounted_rewards', self.rewards_ph)
                     tf.summary.scalar('learning_rate', tf.reduce_mean(self.learning_rate_ph))
-                    tf.summary.histogram('learning_rate', self.learning_rate_ph)
                     tf.summary.scalar('advantage', tf.reduce_mean(self.advs_ph))
-                    tf.summary.histogram('advantage', self.advs_ph)
                     tf.summary.scalar('clip_range', tf.reduce_mean(self.clip_range_ph))
-                    tf.summary.histogram('clip_range', self.clip_range_ph)
                     tf.summary.scalar('old_neglog_action_probabilty', tf.reduce_mean(self.old_neglog_pac_ph))
-                    tf.summary.histogram('old_neglog_action_probabilty', self.old_neglog_pac_ph)
                     tf.summary.scalar('old_value_pred', tf.reduce_mean(self.old_vpred_ph))
-                    tf.summary.histogram('old_value_pred', self.old_vpred_ph)
-                    if len(self.observation_space.shape) == 3:
-                        tf.summary.image('observation', train_model.obs_ph)
-                    else:
-                        tf.summary.histogram('observation', train_model.obs_ph)
+
+                    if self.full_tensorboard_log:
+                        tf.summary.histogram('discounted_rewards', self.rewards_ph)
+                        tf.summary.histogram('learning_rate', self.learning_rate_ph)
+                        tf.summary.histogram('advantage', self.advs_ph)
+                        tf.summary.histogram('clip_range', self.clip_range_ph)
+                        tf.summary.histogram('old_neglog_action_probabilty', self.old_neglog_pac_ph)
+                        tf.summary.histogram('old_value_pred', self.old_vpred_ph)
+                        if tf_util.is_image(self.observation_space):
+                            tf.summary.image('observation', train_model.obs_ph)
+                        else:
+                            tf.summary.histogram('observation', train_model.obs_ph)
 
                 self.train_model = train_model
                 self.act_model = act_model
@@ -230,7 +237,7 @@ class PPO2(ActorCriticRLModel):
 
         if writer is not None:
             # run loss backprop with summary, but once every 10 runs save the metadata (memory, compute time, ...)
-            if (1 + update) % 10 == 0:
+            if self.full_tensorboard_log and (1 + update) % 10 == 0:
                 run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()
                 summary, policy_loss, value_loss, policy_entropy, approxkl, clipfrac, _ = self.sess.run(

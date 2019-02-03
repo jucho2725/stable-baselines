@@ -45,6 +45,8 @@ class DQN(OffPolicyRLModel):
     :param verbose: (int) the verbosity level: 0 none, 1 training information, 2 tensorflow debug
     :param tensorboard_log: (str) the log location for tensorboard (if None, no logging)
     :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
+    :param full_tensorboard_log: (bool) enable additional logging when using tensorboard
+        WARNING: this logging can take a lot of space quickly
     """
 
     def __init__(self, policy, env, gamma=0.99, learning_rate=5e-4, buffer_size=50000, exploration_fraction=0.1,
@@ -52,7 +54,7 @@ class DQN(OffPolicyRLModel):
                  learning_starts=1000, target_network_update_freq=500, prioritized_replay=False,
                  prioritized_replay_alpha=0.6, prioritized_replay_beta0=0.4, prioritized_replay_beta_iters=None,
                  prioritized_replay_eps=1e-6, param_noise=False, verbose=0, tensorboard_log=None,
-                 _init_setup_model=True, policy_kwargs=None):
+                 _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False):
 
         # TODO: replay_buffer refactoring
         super(DQN, self).__init__(policy=policy, env=env, replay_buffer=None, verbose=verbose, policy_base=DQNPolicy,
@@ -76,6 +78,7 @@ class DQN(OffPolicyRLModel):
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.tensorboard_log = tensorboard_log
+        self.full_tensorboard_log = full_tensorboard_log
 
         self.graph = None
         self.sess = None
@@ -123,7 +126,8 @@ class DQN(OffPolicyRLModel):
                     gamma=self.gamma,
                     grad_norm_clipping=10,
                     param_noise=self.param_noise,
-                    sess=self.sess
+                    sess=self.sess,
+                    full_tensorboard_log=self.full_tensorboard_log
                 )
                 self.proba_step = self.step_model.proba_step
                 self.params = find_trainable_variables("deepq")

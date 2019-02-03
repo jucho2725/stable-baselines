@@ -57,13 +57,16 @@ class SAC(OffPolicyRLModel):
     :param tensorboard_log: (str) the log location for tensorboard (if None, no logging)
     :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
     :param policy_kwargs: (dict) additional arguments to be passed to the policy on creation
+    :param full_tensorboard_log: (bool) enable additional logging when using tensorboard
+        Note: this has no effect on SAC logging for now
     """
 
     def __init__(self, policy, env, gamma=0.99, learning_rate=3e-4, buffer_size=50000,
                  learning_starts=100, train_freq=1, batch_size=64,
                  tau=0.005, ent_coef='auto', target_update_interval=1,
-                 gradient_steps=1, target_entropy='auto',
-                 verbose=0, tensorboard_log=None, _init_setup_model=True, policy_kwargs=None):
+                 gradient_steps=1, target_entropy='auto', verbose=0, tensorboard_log=None,
+                 _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False):
+
         super(SAC, self).__init__(policy=policy, env=env, replay_buffer=None, verbose=verbose,
                                   policy_base=SACPolicy, requires_vec_env=False, policy_kwargs=policy_kwargs)
 
@@ -95,6 +98,7 @@ class SAC(OffPolicyRLModel):
         self.summary = None
         self.policy_tf = None
         self.target_entropy = target_entropy
+        self.full_tensorboard_log = full_tensorboard_log
 
         self.obs_target = None
         self.target_policy = None

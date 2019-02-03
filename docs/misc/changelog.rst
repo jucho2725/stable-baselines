@@ -10,6 +10,8 @@ Pre-Release 2.4.1 (WIP)
 
 - fixed computation of training metrics in TRPO and PPO1
 - added ``reset_num_timesteps`` keyword when calling train() to continue tensorboard learning curves
+- reduced the size taken by tensorboard logs (added a ``full_tensorboard_log`` to enable full logging, which was the previous behavior)
+- fixed image detection for tensorboard logging
 
 
 Release 2.4.0 (2019-01-17)

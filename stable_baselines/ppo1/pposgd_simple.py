@@ -38,11 +38,14 @@ class PPO1(ActorCriticRLModel):
     :param tensorboard_log: (str) the log location for tensorboard (if None, no logging)
     :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
     :param policy_kwargs: (dict) additional arguments to be passed to the policy on creation
+    :param full_tensorboard_log: (bool) enable additional logging when using tensorboard
+        WARNING: this logging can take a lot of space quickly
     """
 
     def __init__(self, policy, env, gamma=0.99, timesteps_per_actorbatch=256, clip_param=0.2, entcoeff=0.01,
                  optim_epochs=4, optim_stepsize=1e-3, optim_batchsize=64, lam=0.95, adam_epsilon=1e-5,
-                 schedule='linear', verbose=0, tensorboard_log=None, _init_setup_model=True, policy_kwargs=None):
+                 schedule='linear', verbose=0, tensorboard_log=None,
+                 _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False):
 
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -58,6 +61,7 @@ class PPO1(ActorCriticRLModel):
         self.adam_epsilon = adam_epsilon
         self.schedule = schedule
         self.tensorboard_log = tensorboard_log
+        self.full_tensorboard_log = full_tensorboard_log
 
         self.graph = None
         self.sess = None
@@ -148,17 +152,19 @@ class PPO1(ActorCriticRLModel):
 
                 with tf.variable_scope("input_info", reuse=False):
                     tf.summary.scalar('discounted_rewards', tf.reduce_mean(ret))
-                    tf.summary.histogram('discounted_rewards', ret)
                     tf.summary.scalar('learning_rate', tf.reduce_mean(self.optim_stepsize))
-                    tf.summary.histogram('learning_rate', self.optim_stepsize)
                     tf.summary.scalar('advantage', tf.reduce_mean(atarg))
-                    tf.summary.histogram('advantage', atarg)
                     tf.summary.scalar('clip_range', tf.reduce_mean(self.clip_param))
-                    tf.summary.histogram('clip_range', self.clip_param)
-                    if len(self.observation_space.shape) == 3:
-                        tf.summary.image('observation', obs_ph)
-                    else:
-                        tf.summary.histogram('observation', obs_ph)
+
+                    if self.full_tensorboard_log:
+                        tf.summary.histogram('discounted_rewards', ret)
+                        tf.summary.histogram('learning_rate', self.optim_stepsize)
+                        tf.summary.histogram('advantage', atarg)
+                        tf.summary.histogram('clip_range', self.clip_param)
+                        if tf_util.is_image(self.observation_space):
+                            tf.summary.image('observation', obs_ph)
+                        else:
+                            tf.summary.histogram('observation', obs_ph)
 
                 self.step = self.policy_pi.step
                 self.proba_step = self.policy_pi.proba_step
@@ -259,7 +265,7 @@ class PPO1(ActorCriticRLModel):
                             if writer is not None:
                                 # run loss backprop with summary, but once every 10 runs save the metadata
                                 # (memory, compute time, ...)
-                                if (1 + k) % 10 == 0:
+                                if self.full_tensorboard_log and (1 + k) % 10 == 0:
                                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                                     run_metadata = tf.RunMetadata()
                                     summary, grad, *newlosses = self.lossandgrad(batch["ob"], batch["ob"], batch["ac"],

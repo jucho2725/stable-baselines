@@ -302,8 +302,9 @@ class PPO1(ActorCriticRLModel):
                     lens, rews = map(flatten_lists, zip(*listoflrpairs))
                     lenbuffer.extend(lens)
                     rewbuffer.extend(rews)
-                    logger.record_tabular("EpLenMean", np.mean(lenbuffer))
-                    logger.record_tabular("EpRewMean", np.mean(rewbuffer))
+                    if len(lenbuffer) > 0:
+                        logger.record_tabular("EpLenMean", np.mean(lenbuffer))
+                        logger.record_tabular("EpRewMean", np.mean(rewbuffer))
                     logger.record_tabular("EpThisIter", len(lens))
                     episodes_so_far += len(lens)
                     total_timesteps = MPI.COMM_WORLD.allreduce(seg["total_timestep"])

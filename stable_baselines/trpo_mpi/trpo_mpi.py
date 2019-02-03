@@ -121,12 +121,12 @@ class TRPO(ActorCriticRLModel):
 
                 # Construct network for new policy
                 self.policy_pi = self.policy(self.sess, self.observation_space, self.action_space, self.n_envs, 1,
-                                             None, reuse=False)
+                                             None, reuse=False, **self.policy_kwargs)
 
                 # Network for old policy
                 with tf.variable_scope("oldpi", reuse=False):
                     old_policy = self.policy(self.sess, self.observation_space, self.action_space, self.n_envs, 1,
-                                             None, reuse=False)
+                                             None, reuse=False, **self.policy_kwargs)
 
                 with tf.variable_scope("loss", reuse=False):
                     atarg = tf.placeholder(dtype=tf.float32, shape=[None])  # Target advantage function (if applicable)
@@ -433,8 +433,9 @@ class TRPO(ActorCriticRLModel):
                     lenbuffer.extend(lens)
                     rewbuffer.extend(rews)
 
-                    logger.record_tabular("EpLenMean", np.mean(lenbuffer))
-                    logger.record_tabular("EpRewMean", np.mean(rewbuffer))
+                    if len(lenbuffer) > 0:
+                        logger.record_tabular("EpLenMean", np.mean(lenbuffer))
+                        logger.record_tabular("EpRewMean", np.mean(rewbuffer))
                     if self.using_gail:
                         logger.record_tabular("EpTrueRewMean", np.mean(true_rewbuffer))
                     logger.record_tabular("EpThisIter", len(lens))

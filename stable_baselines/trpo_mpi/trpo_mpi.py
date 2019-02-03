@@ -344,7 +344,8 @@ class TRPO(ActorCriticRLModel):
                                 summary, grad, *lossbefore = self.compute_lossandgrad(*args, tdlamret, sess=self.sess,
                                                                                       options=run_options,
                                                                                       run_metadata=run_metadata)
-                                writer.add_run_metadata(run_metadata, 'step%d' % steps)
+                                if self.full_tensorboard_log:
+                                    writer.add_run_metadata(run_metadata, 'step%d' % steps)
                                 writer.add_summary(summary, steps)
                             else:
                                 _, grad, *lossbefore = self.compute_lossandgrad(*args, tdlamret, sess=self.sess,

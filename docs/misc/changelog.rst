@@ -13,6 +13,7 @@ Pre-Release 2.4.1 (WIP)
 - reduced the size taken by tensorboard logs (added a ``full_tensorboard_log`` to enable full logging, which was the previous behavior)
 - fixed image detection for tensorboard logging
 - fixed ACKTR for recurrent policies
+- fixed gym breaking changes
 
 
 Release 2.4.0 (2019-01-17)

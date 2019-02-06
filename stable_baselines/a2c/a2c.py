@@ -247,7 +247,7 @@ class A2C(ActorCriticRLModel):
                 if self.verbose >= 1 and (update % log_interval == 0 or update == 1):
                     explained_var = explained_variance(values, rewards)
                     logger.record_tabular("nupdates", update)
-                    logger.record_tabular("total_timesteps", update * self.n_batch)
+                    logger.record_tabular("total_timesteps", self.num_timesteps)
                     logger.record_tabular("fps", fps)
                     logger.record_tabular("policy_entropy", float(policy_entropy))
                     logger.record_tabular("value_loss", float(value_loss))

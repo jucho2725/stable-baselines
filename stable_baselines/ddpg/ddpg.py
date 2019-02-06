@@ -812,9 +812,10 @@ class DDPG(OffPolicyRLModel):
                                 ep_rew = np.array([reward]).reshape((1, -1))
                                 ep_done = np.array([done]).reshape((1, -1))
                                 self.episode_reward = total_episode_reward_logger(self.episode_reward, ep_rew, ep_done,
-                                                                                  writer, total_steps)
+                                                                                  writer, self.num_timesteps)
                             step += 1
                             total_steps += 1
+                            self.num_timesteps += 1
                             if rank == 0 and self.render:
                                 self.env.render()
                             episode_reward += reward
